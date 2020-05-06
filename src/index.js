@@ -929,10 +929,12 @@ function _sendTransaction(engine, account, api, data, cb) {
                         if (cb) cb(error);
                     } else {
                         if (cb) cb(null, result.txHash);
-                        const { emitter } = notify.hash(result.txHash);
-                        emitter.on("all", (transaction) => {
-                            console.info(transaction);
-                        })
+                        if (notify) {
+                            const { emitter } = notify.hash(result.txHash);
+                            emitter.on("all", (transaction) => {
+                                console.info(transaction);
+                            })
+                        }
 
                     }
                 } else {
