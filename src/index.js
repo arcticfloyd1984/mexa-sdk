@@ -41,7 +41,6 @@ let loginDomainType, loginMessageType, loginDomainData;
 function Biconomy(argument1, argument2) {
     try {
         let provider;
-        let onboardParams;
         let engine = this;
         if (argument2.notifyOptions == null) {
             provider = argument1;
@@ -313,16 +312,16 @@ async function notifyObjectInitializer(notifyParams, provider, options, engine) 
             notify = Notify(notifyParams);
             const { emitter } = notify.account(provider.selectedAddress);
             emitter.on("all", (transaction) => {
-                console.log(transaction);
+                console.info(transaction);
             })
             biconomyInitializer(engine, provider, options);
         } else {
             eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-                formatMessage(RESPONSE_CODES.ONBOARD_INITIALIZATION_ERROR, "Error while initializing Onboard"), error);
+                formatMessage(RESPONSE_CODES.NOTIFY_INITIALIZATION_ERROR, "Error while initializing Notify"), error);
         }
     } catch (error) {
         eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-            formatMessage(RESPONSE_CODES.ONBOARD_INITIALIZATION_ERROR, "Error while initializing Onboard"), error);
+            formatMessage(RESPONSE_CODES.NOTIFY_INITIALIZATION_ERROR, "Error while initializing Notify"), error);
     }
 }
 
@@ -930,6 +929,11 @@ function _sendTransaction(engine, account, api, data, cb) {
                         if (cb) cb(error);
                     } else {
                         if (cb) cb(null, result.txHash);
+                        const { emitter } = notify.hash(result.txHash);
+                        emitter.on("all", (transaction) => {
+                            console.info(transaction);
+                        })
+
                     }
                 } else {
                     _logMessage(response);
