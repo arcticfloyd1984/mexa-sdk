@@ -3,6 +3,7 @@ const Promise = require('promise');
 const txDecoder = require('ethereum-tx-decoder');
 const { config, RESPONSE_CODES, EVENTS, BICONOMY_RESPONSE_CODES, STATUS } = require('./config');
 const DEFAULT_PAYLOAD_ID = "99999999";
+const ethers = require('ethers');
 const Web3 = require('web3');
 const baseURL = config.baseURL;
 const userLoginPath = config.userLoginPath;
@@ -32,6 +33,7 @@ let domainData = {
 let loginDomainType, loginMessageType, loginDomainData;
 
 function Biconomy(provider, options) {
+    console.log(ethers);
     _validate(options);
     this.isBiconomy = true;
     this.status = STATUS.INIT;
@@ -52,6 +54,7 @@ function Biconomy(provider, options) {
 
     if (provider) {
         web3 = new Web3(provider);
+        // ethersProvider = new ethers.providers.Web3Provider(web3.currentProvider);
         if (options.defaultAccount) {
             web3.eth.defaultAccount = options.defaultAccount;
         }
@@ -233,7 +236,7 @@ Biconomy.prototype.getUserMessageToSign = function(rawTransaction, cb) {
                 message.batchId = config.NONCE_BATCH_ID;
                 let nonce = await _getUserContractNonce(account, engine);
                 message.nonce = parseInt(nonce);
-                message.value = web3.utils.toHex(decodedTx.value);
+                message.value = ethers.utils.toHex(decodedTx.value);
                 message.txGas = decodedTx.gasLimit.toString() ? decodedTx.gasLimit.toString() : 0;
                 message.expiry = config.EXPIRY;
                 message.baseGas = config.BASE_GAS;
@@ -406,7 +409,7 @@ async function sendSignedTransaction(engine, payload, end) {
                             data.from = account;
                             data.apiId = api.id;
                             data.data = decodedTx.data;
-                            data.value = web3.utils.toHex(decodedTx.value)
+                            data.value = ethers.utils.hexlify(decodedTx.value)
                             data.gasLimit = decodedTx.gasLimit.toString();
                             data.gasPrice = decodedTx.gasPrice.toString();
                             data.nonceBatchId = config.NONCE_BATCH_ID;
@@ -478,7 +481,7 @@ Biconomy.prototype.withdrawFunds = function(receiverAddress, withdrawAmount, cb)
             message.data = "0x0";
             message.batchId = config.NONCE_BATCH_ID;
             message.nonce = parseInt(nonce);
-            message.value = web3.utils.toHex(withdrawAmount || 0);
+            message.value = ethers.utils.hexlify(withdrawAmount || 0);
             message.txGas = 0;
             message.expiry = config.EXPIRY;
             message.baseGas = config.BASE_GAS;
@@ -516,7 +519,7 @@ Biconomy.prototype.withdrawFunds = function(receiverAddress, withdrawAmount, cb)
                         let data = {};
                         data.signature = response.result;
                         data.to = receiverAddress;
-                        data.value = web3.utils.toHex(withdrawAmount) || 0;
+                        data.value = ethers.utils.hexlify(withdrawAmount) || 0;
                         data.from = account;
                         data.data = "0x0";
                         data.expiry = config.EXPIRY;
@@ -651,7 +654,7 @@ async function handleSendTransaction(engine, payload, end) {
                     message.data = payload.params[0].data;
                     message.batchId = config.NONCE_BATCH_ID;
                     message.nonce = parseInt(nonce);
-                    message.value = web3.utils.toHex(payload.params[0].value || 0);
+                    message.value = ethers.utils.hexlify(payload.params[0].value || 0);
                     message.txGas = gasLimit ? gasLimit : 0;
                     message.expiry = config.EXPIRY;
                     message.baseGas = config.BASE_GAS;
@@ -693,7 +696,7 @@ async function handleSendTransaction(engine, payload, end) {
                             data.expiry = config.EXPIRY;
                             data.baseGas = config.BASE_GAS;
                             data.userContract = userContractWallet;
-                            data.value = web3.utils.toHex(payload.params[0].value || 0);
+                            data.value = ethers.utils.hexlify(payload.params[0].value || 0);
                             data.gasPrice = gasPrice;
                             data.gasLimit = gasLimit ? gasLimit : 0;
                             data.relayerPayment = {
@@ -870,7 +873,7 @@ function _getParamValue(paramObj) {
         switch (type) {
             case (type.match(/^uint/) || type.match(/^int/) || {}).input:
                 value = scientificToDecimal(parseInt(paramObj.value));
-                value = web3.utils.toHex(value);
+                value = ethers.utils.hexlify(value);
                 break;
             case 'string':
                 if (typeof paramObj.value === "object") {
