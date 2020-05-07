@@ -22,6 +22,8 @@ const events = require('events');
 var eventEmitter = new events.EventEmitter();
 let loginInterval;
 
+let ethersProvider;
+
 let domainType, metaInfoType, relayerPaymentType, metaTransactionType;
 
 let domainData = {
@@ -52,9 +54,16 @@ function Biconomy(provider, options) {
     }
     _init(this.apiKey, this);
 
+    ethersProvider = new ethers.providers.Web3Provider(provider);
+    // const ethersKeys = Object.getOwnPropertyNames(Object.getPrototypeOf(ethersProvider));
+    // for (var i = 0; i < ethersKeys.length; i++) {
+    //     console.log(ethersProvider[ethersKeys[i]])
+    // }
+    // console.log(ethersProvider.listAccounts().then(accounts => console.log(accounts)));
+
+
     if (provider) {
         web3 = new Web3(provider);
-        // ethersProvider = new ethers.providers.Web3Provider(web3.currentProvider);
         if (options.defaultAccount) {
             web3.eth.defaultAccount = options.defaultAccount;
         }
@@ -98,7 +107,7 @@ function Biconomy(provider, options) {
                         payload.params[0].from = userContract;
                     }
                 }
-                web3.currentProvider.send(payload, cb);
+                ethersProvider.send(payload, cb); // web3.currentProvider.send(payload, cb);
             } else {
                 web3.currentProvider.send(payload, cb);
             }
@@ -206,7 +215,7 @@ Biconomy.prototype.getUserMessageToSign = function(rawTransaction, cb) {
                     paramArray.push(_getParamValue(params[i]));
                 }
 
-                let account = web3.eth.accounts.recoverTransaction(rawTransaction);
+                let account = ethers.utils.parseTransaction(rawTransaction).from; // web3.eth.accounts.recoverTransaction(rawTransaction)
                 _logMessage(`signer is ${account}`);
                 if (!account) {
                     let error = formatMessage(RESPONSE_CODES.ERROR_RESPONSE, `Not able to get user account from signed transaction`);
@@ -637,7 +646,7 @@ async function handleSendTransaction(engine, payload, end) {
                     if (!gasLimit || parseInt(gasLimit) == 0) {
                         let contractABI = smartContractMap[to];
                         if (contractABI) {
-                            let contract = new web3.eth.Contract(JSON.parse(contractABI), to);
+                            let contract = new ethers.Contract(to, JSON.parse(contractABI), ethersProvider); // new web3.eth.Contract(JSON.parse(contractABI), to)
                             gasLimit = await contract.methods[methodName].apply(null, paramArray).estimateGas({ from: userContractWallet });
                         }
                     }
@@ -1199,7 +1208,7 @@ Biconomy.prototype.accountLogin = async function(signer, signature, cb) {
 }
 
 const getLoginTransactionReceipt = async(engine, txHash, userAddress) => {
-    var receipt = await web3.eth.getTransactionReceipt(txHash);
+    var receipt = await ethersProvider.getTransactionReceipt(txHash); // web3.eth.getTransactionReceipt()
     if (receipt) {
         if (receipt.status) {
             await _getUserContractWallet(engine, userAddress, (error, userContract) => {
@@ -1264,7 +1273,7 @@ Biconomy.prototype.login = async function(signer, cb) {
             if (cb) cb(response);
             return reject(response);
         }
-        web3.currentProvider.sendAsync({
+        ethersProvider.sendAsync({ // web3.currentProvider
             jsonrpc: JSON_RPC_VERSION,
             id: '101',
             method: config.signTypedV3Method,
