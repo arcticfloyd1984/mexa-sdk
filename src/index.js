@@ -4,6 +4,7 @@ const txDecoder = require('ethereum-tx-decoder');
 const { config, RESPONSE_CODES, EVENTS, BICONOMY_RESPONSE_CODES, STATUS } = require('./config');
 const DEFAULT_PAYLOAD_ID = "99999999";
 const ethers = require('ethers');
+const { isHexString } = require('ethers/utils/bytes');
 const Web3 = require('web3');
 const baseURL = config.baseURL;
 const userLoginPath = config.userLoginPath;
@@ -33,7 +34,6 @@ let domainData = {
 let loginDomainType, loginMessageType, loginDomainData;
 
 function Biconomy(provider, options) {
-    console.log(ethers);
     _validate(options);
     this.isBiconomy = true;
     this.status = STATUS.INIT;
@@ -289,7 +289,7 @@ function _createJsonRpcResponse(payload, error, result) {
         response.error = error;
     } else if (result.error) {
         response.error = result.error;
-    } else if (web3.utils.isHex(result)) {
+    } else if (isHexString(result)) { // ethers.utils.isHexString imported seperately as by default it wasn't being imported
         response.result = result;
     } else {
         response = result;
