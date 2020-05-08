@@ -25,6 +25,7 @@ let loginInterval;
 let web3Provider;
 let options;
 let notify;
+let notifyParams;
 
 
 let domainType, metaInfoType, relayerPaymentType, metaTransactionType;
@@ -55,6 +56,18 @@ function Biconomy(argument1, argument2) {
     } catch (error) {
         throw new Error(error);
     }
+}
+
+
+/**
+ * This methods can be used by the dapp developer
+ * to allow the user to be notified about transaction events
+ * corresponding to a user account.
+ */
+
+Biconomy.prototype.addListenerToAccount = function(address, eventType, callBackFunction) {
+    const { emitter } = notify.account(address);
+    emitter.on(eventType, callBackFunction);
 }
 
 /**
@@ -309,11 +322,12 @@ function biconomyInitializer(engine, provider, options) {
 async function notifyObjectInitializer(notifyParams, provider, options, engine) {
     try {
         if (notifyParams) {
-            notify = Notify(notifyParams);
-            const { emitter } = notify.account(provider.selectedAddress);
-            emitter.on("all", (transaction) => {
-                console.info(transaction);
-            })
+            const notifyOptions = {
+                dappId: notifyParams.dappId,
+                networkId: notifyParams.networkId,
+            }
+            console.log(notifyOptions);
+            notify = Notify(notifyOptions);
             biconomyInitializer(engine, provider, options);
         } else {
             eventEmitter.emit(EVENTS.BICONOMY_ERROR,
@@ -931,9 +945,7 @@ function _sendTransaction(engine, account, api, data, cb) {
                         if (cb) cb(null, result.txHash);
                         if (notify) {
                             const { emitter } = notify.hash(result.txHash);
-                            emitter.on("all", (transaction) => {
-                                console.info(transaction);
-                            })
+                            emitter.on(notifyParams.eventType, notifyParams.callBackFunction);
                         }
 
                     }
