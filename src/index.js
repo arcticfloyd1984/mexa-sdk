@@ -66,8 +66,16 @@ function Biconomy(argument1, argument2) {
  */
 
 Biconomy.prototype.addListenerToAccount = function(address, eventType, callBackFunction) {
-    const { emitter } = notify.account(address);
-    emitter.on(eventType, callBackFunction);
+    if (!eventType) {
+        eventEmitter.emit(EVENTS.BICONOMY_ERROR,
+            formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check eventType"), error);
+    } else if (!callBackFunction) {
+        eventEmitter.emit(EVENTS.BICONOMY_ERROR,
+            formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check callBackFunction"), error);
+    } else {
+        const { emitter } = notify.account(address);
+        emitter.on(eventType, callBackFunction);
+    }
 }
 
 /**
@@ -326,7 +334,6 @@ async function notifyObjectInitializer(notifyParams, provider, options, engine) 
                 dappId: notifyParams.dappId,
                 networkId: notifyParams.networkId,
             }
-            console.log(notifyOptions);
             notify = Notify(notifyOptions);
             biconomyInitializer(engine, provider, options);
         } else {
@@ -944,6 +951,13 @@ function _sendTransaction(engine, account, api, data, cb) {
                     } else {
                         if (cb) cb(null, result.txHash);
                         if (notify) {
+                            if (!notifyParams.eventType) {
+                                eventEmitter.emit(EVENTS.BICONOMY_ERROR,
+                                    formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check eventType"), error);
+                            } else if (!notifyParams.callBackFunction) {
+                                eventEmitter.emit(EVENTS.BICONOMY_ERROR,
+                                    formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check callBackFunction"), error);
+                            }
                             const { emitter } = notify.hash(result.txHash);
                             emitter.on(notifyParams.eventType, notifyParams.callBackFunction);
                         }
