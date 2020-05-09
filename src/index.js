@@ -54,13 +54,7 @@ function Biconomy(provider, options) {
     }
     _init(this.apiKey, this);
 
-    ethersProvider = new ethers.providers.Web3Provider(provider);
-    // const ethersKeys = Object.getOwnPropertyNames(Object.getPrototypeOf(ethersProvider));
-    // for (var i = 0; i < ethersKeys.length; i++) {
-    //     console.log(ethersProvider[ethersKeys[i]])
-    // }
-    // console.log(ethersProvider.listAccounts().then(accounts => console.log(accounts)));
-
+    // ethersProvider = new ethers.providers.Web3Provider(provider);
 
     if (provider) {
         web3 = new Web3(provider);
@@ -215,7 +209,7 @@ Biconomy.prototype.getUserMessageToSign = function(rawTransaction, cb) {
                     paramArray.push(_getParamValue(params[i]));
                 }
 
-                let account = ethers.utils.parseTransaction(rawTransaction).from; // web3.eth.accounts.recoverTransaction(rawTransaction)
+                let account = web3.eth.accounts.recoverTransaction(rawTransaction) // ethers.utils.parseTransaction(rawTransaction).from
                 _logMessage(`signer is ${account}`);
                 if (!account) {
                     let error = formatMessage(RESPONSE_CODES.ERROR_RESPONSE, `Not able to get user account from signed transaction`);
@@ -646,7 +640,7 @@ async function handleSendTransaction(engine, payload, end) {
                     if (!gasLimit || parseInt(gasLimit) == 0) {
                         let contractABI = smartContractMap[to];
                         if (contractABI) {
-                            let contract = new ethers.Contract(to, JSON.parse(contractABI), ethersProvider); // new web3.eth.Contract(JSON.parse(contractABI), to)
+                            let contract = new web3.eth.Contract(JSON.parse(contractABI), to) // new web3.eth.Contract(JSON.parse(contractABI), to)
                             gasLimit = await contract.methods[methodName].apply(null, paramArray).estimateGas({ from: userContractWallet });
                         }
                     }
