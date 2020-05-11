@@ -36,6 +36,7 @@ let domainData = {
 let loginDomainType, loginMessageType, loginDomainData;
 
 function Biconomy(provider, options) {
+    ethersProvider = new ethers.providers.Web3Provider(provider);
     _validate(options);
     this.isBiconomy = true;
     this.status = STATUS.INIT;
@@ -54,30 +55,27 @@ function Biconomy(provider, options) {
     }
     _init(this.apiKey, this);
 
-    // ethersProvider = new ethers.providers.Web3Provider(provider);
-
-    if (provider) {
+    if (ethersProvider) {
         web3 = new Web3(provider);
         if (options.defaultAccount) {
             web3.eth.defaultAccount = options.defaultAccount;
         }
-        const proto = Object.getPrototypeOf(provider)
+        const proto = Object.getPrototypeOf(ethersProvider)
         const keys = Object.getOwnPropertyNames(proto)
 
         for (var i = 0; i < keys.length; i++) {
-            this[keys[i]] = provider[keys[i]];
+            this[keys[i]] = ethersProvider[keys[i]];
         }
 
-        for (var key in provider) {
+        for (var key in ethersProvider) {
             if (!this[key]) {
-                this[key] = provider[key];
+                this[key] = ethersProvider[key];
             }
         }
 
-        this.providerSend = provider.send || provider.sendAsync;
+        this.providerSend = ethersProvider.send;
         this.send = function(payload, cb) {
             if (payload.method == 'eth_sendTransaction') {
-
                 handleSendTransaction(this, payload, (error, result) => {
                     let response = _createJsonRpcResponse(payload, error, result);
                     if (cb) {
@@ -86,7 +84,6 @@ function Biconomy(provider, options) {
                 });
 
             } else if (payload.method == 'eth_sendRawTransaction') {
-
                 sendSignedTransaction(this, payload, (error, result) => {
                     let response = _createJsonRpcResponse(payload, error, result);
                     if (cb) {
@@ -101,9 +98,15 @@ function Biconomy(provider, options) {
                         payload.params[0].from = userContract;
                     }
                 }
-                ethersProvider.send(payload, cb); // web3.currentProvider.send(payload, cb);
+                ethersProvider.send(payload.method, payload.params).then((result, error) => {
+                    let response = _createJsonRpcResponse(payload, error, result);
+                    cb(error, response)
+                });
             } else {
-                web3.currentProvider.send(payload, cb);
+                ethersProvider.send(payload.method, payload.params).then((result, error) => {
+                    let response = _createJsonRpcResponseEthersCalls(payload, error, result);
+                    cb(error, response)
+                });
             }
         };
         this.sendAsync = this.send;
@@ -209,7 +212,7 @@ Biconomy.prototype.getUserMessageToSign = function(rawTransaction, cb) {
                     paramArray.push(_getParamValue(params[i]));
                 }
 
-                let account = web3.eth.accounts.recoverTransaction(rawTransaction) // ethers.utils.parseTransaction(rawTransaction).from
+                let account = ethers.utils.parseTransaction(rawTransaction).from;
                 _logMessage(`signer is ${account}`);
                 if (!account) {
                     let error = formatMessage(RESPONSE_CODES.ERROR_RESPONSE, `Not able to get user account from signed transaction`);
@@ -292,7 +295,25 @@ function _createJsonRpcResponse(payload, error, result) {
         response.error = error;
     } else if (result.error) {
         response.error = result.error;
-    } else if (isHexString(result)) { // ethers.utils.isHexString imported seperately as by default it wasn't being imported
+    } else if (isHexString(result)) {
+        response.result = result;
+    } else {
+        response = result;
+    }
+    return response;
+}
+
+function _createJsonRpcResponseEthersCalls(payload, error, result) {
+    let response = {};
+    response.id = payload.id;
+    response.jsonrpc = JSON_RPC_VERSION;
+    if (result == null) {
+        response.result = result;
+    } else if (error) {
+        response.error = error;
+    } else if (result.error) {
+        response.error = result.error;
+    } else if (isHexString(result) || Array.isArray(result) || typeof(result) == "string" || typeof(result) == "object") {
         response.result = result;
     } else {
         response = result;
@@ -640,7 +661,7 @@ async function handleSendTransaction(engine, payload, end) {
                     if (!gasLimit || parseInt(gasLimit) == 0) {
                         let contractABI = smartContractMap[to];
                         if (contractABI) {
-                            let contract = new web3.eth.Contract(JSON.parse(contractABI), to) // new web3.eth.Contract(JSON.parse(contractABI), to)
+                            let contract = new web3.eth.Contract(JSON.parse(contractABI), to);
                             gasLimit = await contract.methods[methodName].apply(null, paramArray).estimateGas({ from: userContractWallet });
                         }
                     }
@@ -958,17 +979,13 @@ async function _init(apiKey, engine) {
                 let dappNetworkId = dappResponse.dapp.networkId;
                 let dappId = dappResponse.dapp._id;
                 _logMessage(`Network id corresponding to dapp id ${dappId} is ${dappNetworkId}`);
-                web3.currentProvider.send({
-                    jsonrpc: JSON_RPC_VERSION,
-                    id: '102',
-                    method: 'net_version',
-                    params: []
-                }, function(error, networkResponse) {
-                    if (error || (networkResponse && networkResponse.error)) {
+                ethersProvider.send(
+                    'net_version', []
+                ).then((providerNetworkId, error) => {
+                    if (error || !providerNetworkId) {
                         return eventEmitter.emit(EVENTS.BICONOMY_ERROR,
                             formatMessage(RESPONSE_CODES.NETWORK_ID_NOT_FOUND, "Could not get network version"), error || networkResponse.error);
                     } else {
-                        let providerNetworkId = networkResponse.result;
                         _logMessage(`Current provider network id: ${providerNetworkId}`);
                         if (providerNetworkId != dappNetworkId) {
                             return eventEmitter.emit(EVENTS.BICONOMY_ERROR,
@@ -1202,7 +1219,7 @@ Biconomy.prototype.accountLogin = async function(signer, signature, cb) {
 }
 
 const getLoginTransactionReceipt = async(engine, txHash, userAddress) => {
-    var receipt = await ethersProvider.getTransactionReceipt(txHash); // web3.eth.getTransactionReceipt()
+    var receipt = await web3.eth.getTransactionReceipt(txHash);
     if (receipt) {
         if (receipt.status) {
             await _getUserContractWallet(engine, userAddress, (error, userContract) => {
@@ -1267,7 +1284,7 @@ Biconomy.prototype.login = async function(signer, cb) {
             if (cb) cb(response);
             return reject(response);
         }
-        ethersProvider.sendAsync({ // web3.currentProvider
+        web3.currentProvider.sendAsync({
             jsonrpc: JSON_RPC_VERSION,
             id: '101',
             method: config.signTypedV3Method,
