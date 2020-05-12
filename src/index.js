@@ -339,11 +339,11 @@ async function notifyObjectInitializer(notifyParams, provider, options, engine) 
             biconomyInitializer(engine, provider, options);
         } else {
             eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-                formatMessage(RESPONSE_CODES.NOTIFY_INITIALIZATION_ERROR, "Error while initializing Notify"), error);
+                formatMessage(RESPONSE_CODES.NOTIFY_INITIALIZATION_ERROR, "Error while initializing Notify"));
         }
     } catch (error) {
         eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-            formatMessage(RESPONSE_CODES.NOTIFY_INITIALIZATION_ERROR, "Error while initializing Notify"), error);
+            formatMessage(RESPONSE_CODES.NOTIFY_INITIALIZATION_ERROR, "Error while initializing Notify"));
     }
 }
 
