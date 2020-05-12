@@ -26,6 +26,8 @@ let web3Provider;
 let options;
 let notify;
 let notifyParams;
+let notifyEventType;
+let notifyCallBackFunction;
 
 
 let domainType, metaInfoType, relayerPaymentType, metaTransactionType;
@@ -51,6 +53,8 @@ function Biconomy(argument1, argument2) {
             provider = argument1;
             options = argument2.options;
             notifyParams = argument2.notifyOptions;
+            notifyEventType = argument2.notifyEventType;
+            notifyCallBackFunction = argument2.notifyCallBackFunction
             notifyObjectInitializer(notifyParams, provider, options, engine);
         }
     } catch (error) {
@@ -330,10 +334,7 @@ function biconomyInitializer(engine, provider, options) {
 async function notifyObjectInitializer(notifyParams, provider, options, engine) {
     try {
         if (notifyParams) {
-            const notifyOptions = {
-                dappId: notifyParams.dappId,
-                networkId: notifyParams.networkId,
-            }
+            const notifyOptions = notifyParams;
             notify = Notify(notifyOptions);
             biconomyInitializer(engine, provider, options);
         } else {
@@ -951,15 +952,15 @@ function _sendTransaction(engine, account, api, data, cb) {
                     } else {
                         if (cb) cb(null, result.txHash);
                         if (notify) {
-                            if (!notifyParams.eventType) {
+                            if (!notifyEventType) {
                                 eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-                                    formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check eventType"), error);
-                            } else if (!notifyParams.callBackFunction) {
+                                    formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check eventType"));
+                            } else if (!notifyCallBackFunction) {
                                 eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-                                    formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check callBackFunction"), error);
+                                    formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check callBackFunction"));
                             }
                             const { emitter } = notify.hash(result.txHash);
-                            emitter.on(notifyParams.eventType, notifyParams.callBackFunction);
+                            emitter.on(notifyEventType, notifyCallBackFunction);
                         }
 
                     }
