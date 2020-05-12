@@ -72,10 +72,10 @@ function Biconomy(argument1, argument2) {
 Biconomy.prototype.addListenerToAccount = function(address, eventType, callBackFunction) {
     if (!eventType) {
         eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-            formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check eventType"), error);
+            formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check eventType"));
     } else if (!callBackFunction) {
         eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-            formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check callBackFunction"), error);
+            formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check callBackFunction"));
     } else {
         const { emitter } = notify.account(address);
         emitter.on(eventType, callBackFunction);
