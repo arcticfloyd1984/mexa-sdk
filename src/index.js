@@ -76,6 +76,7 @@ function Biconomy(provider, options) {
         this.providerSend = ethersProvider.send;
         this.send = function(payload, cb) {
             if (payload.method == 'eth_sendTransaction') {
+                console.log(payload);
                 handleSendTransaction(this, payload, (error, result) => {
                     let response = _createJsonRpcResponse(payload, error, result);
                     if (cb) {
