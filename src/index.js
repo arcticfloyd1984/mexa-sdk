@@ -24,8 +24,8 @@ let loginInterval;
 let options;
 let notify;
 let notifyParams;
-let notifyEventType;
-let notifyCallBackFunction;
+let notifyEventOptions;
+
 
 
 let domainType, metaInfoType, relayerPaymentType, metaTransactionType;
@@ -53,9 +53,9 @@ function Biconomy(argument1, argument2) {
         } else {
             provider = argument1;
             options = argument2.options;
-            notifyParams = argument2.notifyOptions;
-            notifyEventType = argument2.notifyEventType;
-            notifyCallBackFunction = argument2.notifyCallBackFunction
+            notifyOptions = argument2.notifyOptions;
+            notifyParams = notifyOptions.notifyParams;
+            notifyEventOptions = notifyOptions.notifyEventOptions;
             notifyObjectInitializer(notifyParams, provider, options, engine);
         }
     } catch (error) {
@@ -71,17 +71,19 @@ function Biconomy(argument1, argument2) {
  * corresponding to a user account.
  */
 
-Biconomy.prototype.addListenerToAccount = function(address, eventType, callBackFunction) {
+Biconomy.prototype.addListenerToAccount = function(address, notifyAddressEventOptions) {
     try {
-        if (!eventType) {
-            eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-                formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check eventType"));
-        } else if (!callBackFunction) {
-            eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-                formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check callBackFunction"));
-        } else {
-            const { emitter } = notify.account(address);
-            emitter.on(eventType, callBackFunction);
+        for (var eventType in notifyAddressEventOptions) {
+            if (!eventType) {
+                eventEmitter.emit(EVENTS.BICONOMY_ERROR,
+                    formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check eventType"));
+            } else if (!notifyAddressEventOptions[eventType]) {
+                eventEmitter.emit(EVENTS.BICONOMY_ERROR,
+                    formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check callBackFunction"));
+            } else {
+                const { emitter } = notify.account(address);
+                emitter.on(eventType, notifyAddressEventOptions[eventType]);
+            }
         }
     } catch (error) {
         eventEmitter.emit(EVENTS.BICONOMY_ERROR,
@@ -1005,15 +1007,18 @@ function _sendTransaction(engine, account, api, data, cb) {
                     if (cb) cb(null, result.txHash);
                     try {
                         if (notify) {
-                            if (!notifyEventType) {
-                                eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-                                    formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check eventType. Using default settings."));
-                            } else if (!notifyCallBackFunction) {
-                                eventEmitter.emit(EVENTS.BICONOMY_ERROR,
-                                    formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check callBackFunction. Using default settings."));
-                            }
                             const { emitter } = notify.hash(result.txHash);
-                            emitter.on(notifyEventType, notifyCallBackFunction);
+                            for (var eventType in notifyEventOptions) {
+                                if (!eventType) {
+                                    eventEmitter.emit(EVENTS.BICONOMY_ERROR,
+                                        formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check eventType. Using default settings."));
+                                } else if (!notifyEventOptions[eventType]) {
+                                    eventEmitter.emit(EVENTS.BICONOMY_ERROR,
+                                        formatMessage(RESPONSE_CODES.NOTIFY_PARAMS_ERROR, "Error in Notify Params. Check callBackFunction. Using default settings."));
+                                } else {
+                                    emitter.on(eventType, notifyEventOptions[eventType]);
+                                }
+                            }
                         }
                     } catch (error) {
                         eventEmitter.emit(EVENTS.BICONOMY_ERROR,
